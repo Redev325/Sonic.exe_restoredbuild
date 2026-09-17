@@ -1,4 +1,4 @@
-name: Build HTML5
+name: Build and Deploy HTML5 to GitHub Pages
 
 on:
   push:
@@ -7,6 +7,12 @@ on:
 
 permissions:
   contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   buildHTML5:
@@ -14,6 +20,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
 
       - name: Setup Haxe
         uses: krdlab/setup-haxe@master
@@ -33,41 +42,30 @@ jobs:
       - name: Compile HTML5
         run: haxelib run lime build Project.xml html5 --app-version="4.0.0-${{ github.run_id }}"
 
-      - name: Locate HTML5 output
+      - name: Prepare HTML5 output
         shell: bash
         run: |
           set -e
-          echo "Searching for generated index.html..."
-          HTML5_INDEX="$(find export/release -type f -name index.html -print -quit 2>/dev/null || true)"
+          HTML5_ROOT="export/release/html5/bin"
 
-          if [ -z "$HTML5_INDEX" ]; then
-            echo "No HTML5 index.html was found under export/release."
-            echo "Export directory tree:"
-            find export/release -maxdepth 6 -type f -print 2>/dev/null | head -300 || true
+          if [ ! -f "$HTML5_ROOT/index.html" ]; then
+            echo "HTML5 output was not found at $HTML5_ROOT"
+            echo "Generated index.html files:"
+            find export -type f -name index.html -print 2>/dev/null || true
             exit 1
           fi
 
-          HTML5_ROOT="$(dirname "$HTML5_INDEX")"
-          echo "HTML5 files are in: $HTML5_ROOT"
-
-          test -d "$HTML5_ROOT"
-          test -f "$HTML5_ROOT/index.html"
-          echo "HTML5_ROOT=$HTML5_ROOT" >> "$GITHUB_ENV"
+          echo "GitHub Pages site directory: $HTML5_ROOT"
           du -sh "$HTML5_ROOT"
-          find "$HTML5_ROOT" -maxdepth 2 -type f | head -75
+          find "$HTML5_ROOT" -maxdepth 2 -type f | head -100
 
-      - name: Create ZIP
+      - name: Create HTML5 ZIP
         shell: bash
         run: |
           set -e
-          test -d "$HTML5_ROOT"
-          test -f "$HTML5_ROOT/index.html"
-          rm -f sonic-exe-html5.zip
-
-          cd "$HTML5_ROOT"
+          cd export/release/html5/bin
           zip -r "$GITHUB_WORKSPACE/sonic-exe-html5.zip" .
           cd "$GITHUB_WORKSPACE"
-
           ls -lh sonic-exe-html5.zip
 
       - name: Upload HTML5 ZIP
@@ -76,3 +74,14 @@ jobs:
           name: sonic-exe-html5
           path: sonic-exe-html5.zip
           if-no-files-found: error
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: export/release/html5/bin
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages
