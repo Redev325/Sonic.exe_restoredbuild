@@ -33,19 +33,45 @@ jobs:
       - name: Compile HTML5
         run: haxelib run lime build Project.xml html5 --app-version="4.0.0-${{ github.run_id }}"
 
-      - name: Verify HTML5 output
+      - name: Locate HTML5 output
+        shell: bash
         run: |
-          test -d export/release/html5
-          test -f export/release/html5/index.html
-          echo "HTML5 build found:"
-          du -sh export/release/html5
-          find export/release/html5 -maxdepth 2 -type f | head -50
+          set -e
+          echo "Searching for generated index.html..."
+          find export -type f -name index.html -print 2>/dev/null || true
+
+          HTML5_INDEX="$(find export/release -type f -name index.html -print -quit 2>/dev/null || true)"
+          if [ -z "$HTML5_INDEX" ]; then
+            echo "No HTML5 index.html was found under export/release."
+            echo "Export directory tree:"
+            find export/release -maxdepth 5 -type f -print 2>/dev/null | head -250 || true
+            exit 1
+          fi
+
+          HTML5_DIR="$(dirname "$HTML5_INDEX")"
+          case "$HTML5_DIR" in
+            */html5/bin) HTML5_ROOT="${HTML5_DIR%/bin}" ;;&
+            */html5) HTML5_ROOT="$HTML5_DIR" ;;&
+            *) HTML5_ROOT="$HTML5_DIR" ;;&
+          esac
+
+          echo "HTML5_ROOT=$HTML5_ROOT" >> "$GITHUB_ENV"
+          echo "HTML5 output found at: $HTML5_ROOT"
+          test -d "$HTML5_ROOT"
+          test -f "$HTML5_ROOT/index.html"
+          du -sh "$HTML5_ROOT"
+          find "$HTML5_ROOT" -maxdepth 2 -type f | head -75
 
       - name: Create ZIP
+        shell: bash
         run: |
-          cd export/release
-          zip -r ../../sonic-exe-html5.zip html5
-          cd ../..
+          set -e
+          test -d "$HTML5_ROOT"
+          test -f "$HTML5_ROOT/index.html"
+          rm -f sonic-exe-html5.zip
+          cd "$(dirname "$HTML5_ROOT")"
+          zip -r "$GITHUB_WORKSPACE/sonic-exe-html5.zip" "$(basename "$HTML5_ROOT")"
+          cd "$GITHUB_WORKSPACE"
           ls -lh sonic-exe-html5.zip
 
       - name: Upload HTML5 ZIP
