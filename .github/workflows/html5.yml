@@ -50,9 +50,9 @@ jobs:
 
           HTML5_DIR="$(dirname "$HTML5_INDEX")"
           case "$HTML5_DIR" in
-            */html5/bin) HTML5_ROOT="${HTML5_DIR%/bin}" ;;&
-            */html5) HTML5_ROOT="$HTML5_DIR" ;;&
-            *) HTML5_ROOT="$HTML5_DIR" ;;&
+            */html5/bin) HTML5_ROOT="${HTML5_DIR%/bin}" ;;
+            */html5) HTML5_ROOT="$HTML5_DIR" ;;
+            *) HTML5_ROOT="$HTML5_DIR" ;;
           esac
 
           echo "HTML5_ROOT=$HTML5_ROOT" >> "$GITHUB_ENV"
