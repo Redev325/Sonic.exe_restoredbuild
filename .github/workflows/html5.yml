@@ -1,0 +1,54 @@
+name: Build HTML5
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  buildHTML5:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Haxe
+        uses: krdlab/setup-haxe@master
+        with:
+          haxe-version: 4.2.5
+
+      - name: Install Haxelib dependencies
+        run: |
+          haxelib setup ~/haxelib
+          haxelib install hxcpp --quiet
+          haxelib install hmm --quiet
+          haxelib run hmm install
+
+      - name: Create Version Tag
+        run: echo "${{ github.run_id }}" > VERSION
+
+      - name: Compile HTML5
+        run: haxelib run lime build Project.xml html5 --app-version="4.0.0-${{ github.run_id }}"
+
+      - name: Verify HTML5 output
+        run: |
+          test -d export/release/html5
+          test -f export/release/html5/index.html
+          echo "HTML5 build found:"
+          du -sh export/release/html5
+          find export/release/html5 -maxdepth 2 -type f | head -50
+
+      - name: Create ZIP
+        run: |
+          cd export/release
+          zip -r ../../sonic-exe-html5.zip html5
+          cd ../..
+          ls -lh sonic-exe-html5.zip
+
+      - name: Upload HTML5 ZIP
+        uses: actions/upload-artifact@v7
+        with:
+          name: sonic-exe-html5
+          path: sonic-exe-html5.zip
+          if-no-files-found: error
