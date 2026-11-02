@@ -222,6 +222,14 @@ class TitleState extends MusicBeatState
 		logoBl.animation.addByPrefix('bump', 'logo bumpin', 24, false);
 		logoBl.animation.play('bump');
 		logoBl.updateHitbox();
+
+		// Enlarge the title logo slightly while keeping its original center position.
+		var originalLogoWidth:Float = logoBl.width;
+		var originalLogoHeight:Float = logoBl.height;
+		logoBl.setGraphicSize(Std.int(originalLogoWidth * 1.15));
+		logoBl.updateHitbox();
+		logoBl.x -= (logoBl.width - originalLogoWidth) / 2;
+		logoBl.y -= (logoBl.height - originalLogoHeight) / 2;
 		// logoBl.screenCenter();
 		// logoBl.color = FlxColor.BLACK;
 
